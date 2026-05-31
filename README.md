@@ -14,7 +14,12 @@ Machine Learning with threat intelligence to identify malicious URLs
 with **96.92% accuracy**.
 
 ---
+## 🌐 Live Demo
+🔗 **[Try PhishGuard AI Live](https://phishguard-ai-5s0p.onrender.com)**
 
+> Note: First load may take 30-50 seconds (free tier spin-up)
+
+---
 ## ✨ Features
 - 🤖 **ML Detection** — Random Forest classifier (96.92% accuracy)
 - 🎯 **Threat Indicators** — 7 real-time security checks
