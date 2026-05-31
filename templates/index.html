@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishGuard AI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+body{background:#020810;font-family:'Share Tech Mono','Courier New',monospace;color:#00d4ff;min-height:100vh;overflow-x:hidden;}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+.wrap{position:relative;z-index:2;max-width:820px;margin:0 auto;padding:32px 24px;}
+.corner{position:fixed;width:22px;height:22px;border-color:#00d4ff;border-style:solid;opacity:0.5;z-index:3;}
+.ctL{top:12px;left:12px;border-width:2px 0 0 2px;}
+.ctR{top:12px;right:12px;border-width:2px 2px 0 0;}
+.cbL{bottom:12px;left:12px;border-width:0 0 2px 2px;}
+.cbR{bottom:12px;right:12px;border-width:0 2px 2px 0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.15;}}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes glitchT{0%,88%,100%{clip-path:none;transform:none;}89%{clip-path:inset(20% 0 60% 0);transform:translate(-3px);}91%{clip-path:inset(60% 0 10% 0);transform:translate(3px);}93%{clip-path:none;}}
+@keyframes pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0.25);}50%{box-shadow:0 0 0 10px rgba(0,212,255,0);}}
+@keyframes scanBeam{0%{top:-2px;opacity:0.6;}85%{opacity:0.6;}100%{top:100%;opacity:0;}}
+.scan-beam{position:fixed;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.4),transparent);pointer-events:none;z-index:1;animation:scanBeam 4s linear infinite;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.logo{display:flex;align-items:center;gap:14px;}
+.shield{width:46px;height:46px;border:1.5px solid #00d4ff;border-radius:50%;display:flex;align-items:center;justify-content:center;animation:pulseRing 2.5s infinite;}
+.shield svg{width:22px;height:22px;stroke:#00d4ff;fill:none;stroke-width:1.5;}
+.t1{font-size:16px;letter-spacing:4px;color:#00d4ff;animation:glitchT 7s infinite;}
+.t2{font-size:9px;letter-spacing:2px;color:#1a4a5a;margin-top:3px;}
+.sys{text-align:right;}
+.sys-on{font-size:9px;color:#00d4ff;letter-spacing:2px;display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+.sys-info{font-size:8px;color:#0a3040;letter-spacing:1px;margin-top:3px;}
+.dot{width:6px;height:6px;background:#00d4ff;border-radius:50%;animation:blink 1.3s infinite;}
+.divline{height:1px;background:rgba(0,212,255,0.1);margin:20px 0;position:relative;}
+.divline::after{content:'';position:absolute;left:0;top:0;width:25%;height:1px;background:#00d4ff;opacity:0.35;}
+.input-lbl{font-size:9px;color:#1a5060;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;}
+.input-row{display:flex;gap:10px;margin-bottom:22px;}
+.url-in{flex:1;background:rgba(0,15,30,0.85);border:1px solid #0a3a52;border-radius:7px;padding:13px 16px;color:#00d4ff;font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;outline:none;letter-spacing:1px;transition:border-color 0.2s;}
+.url-in:focus{border-color:#00d4ff;}
+.scan-btn{background:transparent;border:1.5px solid #00d4ff;border-radius:7px;padding:13px 22px;color:#00d4ff;font-family:'Share Tech Mono','Courier New',monospace;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;white-space:nowrap;}
+.scan-btn:hover{background:rgba(0,212,255,0.08);}
+.scan-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.scanner{display:none;margin-bottom:18px;}
+.scanner.on{display:block;}
+.step{font-size:10px;padding:3px 0;letter-spacing:1px;color:#0a2a3a;transition:color 0.3s;}
+.step.done{color:#00d4ff;}
+.step.done::before{content:'[+] ';}
+.step.now{color:#5ae0ff;animation:blink 0.7s infinite;}
+.step.now::before{content:'[>] ';}
+.prog-track{height:3px;background:rgba(0,212,255,0.07);border-radius:2px;overflow:hidden;margin:10px 0 5px;}
+.prog-bar{height:100%;background:#00d4ff;border-radius:2px;width:0%;transition:width 0.35s ease;}
+.prog-pct{font-size:9px;color:#1a5060;text-align:right;letter-spacing:1px;}
+.results{display:none;}
+.results.on{display:block;}
+.vbanner{border-radius:9px;padding:15px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;border:1px solid;animation:fadeSlide 0.5s ease forwards;}
+.vbanner.danger{background:rgba(18,3,3,0.9);border-color:#ff2222;}
+.vbanner.safe{background:rgba(2,16,7,0.9);border-color:#00ff88;}
+.vbanner.warn{background:rgba(16,9,0,0.9);border-color:#ffaa00;}
+.v-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1.5px solid;}
+.vbanner.danger .v-icon{border-color:#ff2222;color:#ff2222;}
+.vbanner.safe .v-icon{border-color:#00ff88;color:#00ff88;}
+.vbanner.warn .v-icon{border-color:#ffaa00;color:#ffaa00;}
+.v-big{font-size:14px;font-weight:700;letter-spacing:2px;}
+.vbanner.danger .v-big{color:#ff4444;}
+.vbanner.safe .v-big{color:#00ff88;}
+.vbanner.warn .v-big{color:#ffaa00;}
+.v-sub{font-size:9px;color:#2a5060;letter-spacing:1px;margin-top:3px;}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.mcard{background:rgba(0,8,18,0.85);border:1px solid #0a2a3a;border-radius:9px;padding:14px;text-align:center;opacity:0;}
+.mval{font-size:22px;font-weight:700;letter-spacing:1px;}
+.mval.r{color:#ff4444;}.mval.a{color:#ffaa00;}.mval.g{color:#00ff88;}.mval.c{color:#00d4ff;}
+.mlbl{font-size:8px;color:#0a3040;letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.gauge-section{display:flex;justify-content:center;margin-bottom:16px;opacity:0;}
+.gauge-wrap{position:relative;width:180px;height:100px;}
+.gauge-wrap svg{width:100%;height:100%;}
+.gauge-lbl{position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:2px;font-weight:700;white-space:nowrap;text-align:center;}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.panel{background:rgba(0,7,16,0.88);border:1px solid #0a2a3a;border-radius:9px;padding:14px;opacity:0;}
+.ptitle{font-size:8px;color:#1a5060;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #081828;}
+.ind-r{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:9px;letter-spacing:1px;}
+.ind-n{color:#1a5060;}
+.badge{font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:1px;}
+.badge.b{background:rgba(24,3,3,0.9);color:#ff3333;border:1px solid #3a0808;}
+.badge.g{background:rgba(2,16,7,0.9);color:#00cc66;border:1px solid #083018;}
+.log-item{font-size:9px;padding:3px 0;letter-spacing:1px;border-bottom:1px solid #050d18;color:#1a4050;}
+.log-item:last-child{border-bottom:none;}
+.log-item.fl{color:#cc2222;}
+.log-item.fl::before{content:'[!] ';}
+.log-item.ok{color:#009944;}
+.log-item.ok::before{content:'[+] ';}
+.final{background:rgba(0,7,16,0.88);border:1px solid #0a2a3a;border-radius:9px;padding:16px;opacity:0;}
+.ftitle{font-size:8px;color:#1a5060;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.fi{display:flex;justify-content:space-between;font-size:9px;padding:6px 10px;background:rgba(0,4,10,0.85);border-radius:4px;border:1px solid #081520;}
+.fk{color:#1a4050;letter-spacing:1px;}
+.fv{font-weight:700;letter-spacing:1px;}
+.fv.r{color:#ff4444;}.fv.g{color:#00ff88;}.fv.c{color:#00d4ff;}
+.rec{border-radius:5px;padding:10px 14px;font-size:10px;letter-spacing:1px;line-height:1.7;border-left:2px solid;}
+.rec.danger{background:rgba(16,2,2,0.85);border-color:#ff2222;color:#cc3333;}
+.rec.safe{background:rgba(2,14,5,0.85);border-color:#00ff88;color:#009944;}
+.rec.warn{background:rgba(14,7,0,0.85);border-color:#ffaa00;color:#aa7700;}
+.error-box{background:rgba(18,3,3,0.9);border:1px solid #ff2222;border-radius:8px;padding:14px;color:#cc3333;font-size:11px;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="scan-beam"></div>
+<div class="corner ctL"></div><div class="corner ctR"></div>
+<div class="corner cbL"></div><div class="corner cbR"></div>
+
+<div class="wrap">
+  <div class="header">
+    <div class="logo">
+      <div class="shield">
+        <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <div>
+        <div class="t1">PHISHGUARD AI</div>
+        <div class="t2">THREAT ANALYSIS SYSTEM v2.4</div>
+      </div>
+    </div>
+    <div class="sys">
+      <div class="sys-on"><div class="dot"></div>SYSTEM ONLINE</div>
+      <div class="sys-info">ML MODEL READY &bull; 96.9% ACCURACY</div>
+    </div>
+  </div>
+
+  <div class="divline"></div>
+
+  <div class="input-lbl">// target url input</div>
+  <div class="input-row">
+    <input class="url-in" id="urlIn" placeholder="https://enter-url-to-analyze.com"/>
+    <button class="scan-btn" id="scanBtn" onclick="startScan()">INITIATE SCAN</button>
+  </div>
+
+  <div class="scanner" id="scanner">
+    <div id="steps">
+      <div class="step" id="s0">Initializing threat analysis engine</div>
+      <div class="step" id="s1">Extracting 30 URL structural features</div>
+      <div class="step" id="s2">Checking IP address and domain integrity</div>
+      <div class="step" id="s3">Validating SSL certificate and HTTPS</div>
+      <div class="step" id="s4">Running Random Forest ML classifier</div>
+      <div class="step" id="s5">Querying threat intelligence vectors</div>
+      <div class="step" id="s6">Computing weighted risk score</div>
+      <div class="step" id="s7">Generating final threat report</div>
+    </div>
+    <div class="prog-track"><div class="prog-bar" id="pBar"></div></div>
+    <div class="prog-pct" id="pPct">0%</div>
+  </div>
+
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+(function(){
+  const c=document.getElementById('bg'),ctx=c.getContext('2d');
+  let W,H,pts=[],hexes=[];
+  function resize(){
+    W=c.width=window.innerWidth;
+    H=c.height=window.innerHeight;
+    hexes=[];
+    const s=30,rows=Math.ceil(H/(s*1.75))+1,cols=Math.ceil(W/(s*2))+1;
+    for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+      hexes.push({x:cc*s*1.75+(r%2?s*0.875:0),y:r*s*1.5,s,p:Math.random()*Math.PI*2,sp:Math.random()*0.008+0.002,a:Math.random()*0.05+0.008});
+    }
+    pts=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,r:Math.random()*1.4+.3,a:Math.random()*.45+.1}));
+  }
+  function hex(x,y,s){
+    ctx.beginPath();
+    for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i?ctx.lineTo(x+s*Math.cos(a),y+s*Math.sin(a)):ctx.moveTo(x+s*Math.cos(a),y+s*Math.sin(a));}
+    ctx.closePath();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    hexes.forEach(h=>{h.p+=h.sp;ctx.strokeStyle=`rgba(0,212,255,${h.a*(0.5+0.5*Math.sin(h.p))})`;ctx.lineWidth=.35;hex(h.x,h.y,h.s);ctx.stroke();});
+    pts.forEach(p=>{p.x=(p.x+p.vx+W)%W;p.y=(p.y+p.vy+H)%H;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,212,255,${p.a})`;ctx.fill();});
+    pts.forEach((p,i)=>pts.slice(i+1).forEach(q=>{const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<85){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle=`rgba(0,212,255,${.07*(1-d/85)})`;ctx.lineWidth=.3;ctx.stroke();}}));
+    requestAnimationFrame(draw);
+  }
+  resize();draw();
+  window.addEventListener('resize',resize);
+})();
+
+function startScan(){
+  const url=document.getElementById('urlIn').value.trim();
+  if(!url)return;
+  document.getElementById('scanBtn').disabled=true;
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('results').innerHTML='';
+  const sc=document.getElementById('scanner');
+  sc.classList.add('on');
+  for(let i=0;i<8;i++)document.getElementById('s'+i).className='step';
+  const pb=document.getElementById('pBar'),pp=document.getElementById('pPct');
+  pb.style.width='0%';pp.textContent='0%';
+  let cur=0;
+  function tick(){
+    if(cur>0)document.getElementById('s'+(cur-1)).className='step done';
+    if(cur<8){
+      document.getElementById('s'+cur).className='step now';
+      pb.style.width=Math.round(cur/8*100)+'%';
+      pp.textContent=Math.round(cur/8*100)+'%';
+      cur++;setTimeout(tick,360);
+    } else {
+      pb.style.width='100%';pp.textContent='100%';
+      setTimeout(()=>{sc.classList.remove('on');callAPI(url);},300);
+    }
+  }
+  tick();
+}
+
+async function callAPI(url){
+  try{
+    const res=await fetch('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const d=await res.json();
+    if(d.error){showError(d.error);return;}
+    showResults(d);
+  }catch(e){showError('Connection error — is Flask running?');}
+}
+
+function showError(msg){
+  document.getElementById('results').innerHTML=`<div class="error-box">[ERROR] ${msg}</div>`;
+  document.getElementById('results').classList.add('on');
+  document.getElementById('scanBtn').disabled=false;
+}
+
+function showResults(d){
+  const isP=d.verdict==='PHISHING',isS=d.verdict==='SUSPICIOUS';
+  const vc=isP?'danger':isS?'warn':'safe';
+  const vi=isP?'!':isS?'?':'+';
+  const rc=isP?'r':isS?'a':'g';
+  const gaugeAngle=isP?80:isS?5:-75;
+  const gc=isP?'#ff3333':isS?'#ffaa00':'#00ff88';
+  const gTxt=isP?'CRITICAL':isS?'ELEVATED':'NOMINAL';
+  const offset=220-(220*((gaugeAngle+90)/170));
+
+  const indHTML=Object.entries(d.indicators).map(([k,v])=>
+    `<div class="ind-r"><span class="ind-n">${k}</span><span class="badge ${v?'b':'g'}">${v?'DETECTED':'CLEAN'}</span></div>`
+  ).join('');
+
+  const logHTML=d.reasons.map(r=>
+    `<div class="log-item ${r.includes('No suspicious')?'ok':'fl'}">${r}</div>`
+  ).join('')+
+  `<div class="log-item">Features analyzed: 30</div>`+
+  `<div class="log-item">Model: Random Forest</div>`+
+  (d.ssl&&!d.ssl.error?`<div class="log-item ok">SSL valid — expires ${d.ssl.expiry}</div>`:`<div class="log-item fl">SSL unavailable</div>`)+
+  (d.whois&&!d.whois.error?`<div class="log-item ok">Domain age: ${d.whois.age_months} months</div>`:`<div class="log-item">Domain age: unavailable</div>`);
+
+  document.getElementById('results').innerHTML=`
+<div class="vbanner ${vc}">
+  <div class="v-icon">${vi}</div>
+  <div><div class="v-big">${d.verdict} DETECTED</div><div class="v-sub">${d.reasons.length} threat indicator${d.reasons.length!==1?'s':''} identified</div></div>
+</div>
+<div class="metrics">
+  <div class="mcard ${rc}" id="mc0"><div class="mval ${rc}">${d.confidence}%</div><div class="mlbl">Confidence</div></div>
+  <div class="mcard ${rc}" id="mc1"><div class="mval ${rc}">${d.risk_level.toUpperCase()}</div><div class="mlbl">Risk level</div></div>
+  <div class="mcard ${rc}" id="mc2"><div class="mval ${rc}">${d.risk_score}/10</div><div class="mlbl">Risk score</div></div>
+</div>
+<div class="gauge-section" id="gs">
+  <div class="gauge-wrap">
+    <svg viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 95 A78 78 0 0 1 168 95" fill="none" stroke="#0a2030" stroke-width="10" stroke-linecap="round"/>
+      <path d="M12 95 A78 78 0 0 1 168 95" fill="none" stroke="${gc}" stroke-width="10" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="${offset}" opacity="0.85"/>
+      <line x1="90" y1="95" x2="${90+70*Math.cos((gaugeAngle-90)*Math.PI/180)}" y2="${95+70*Math.sin((gaugeAngle-90)*Math.PI/180)}" stroke="${gc}" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="90" cy="95" r="5" fill="${gc}"/>
+      <text x="18" y="88" fill="#1a4050" font-size="8" font-family="monospace">LOW</text>
+      <text x="132" y="52" fill="#1a4050" font-size="8" font-family="monospace">HIGH</text>
+    </svg>
+    <div class="gauge-lbl" style="color:${gc}">${gTxt}</div>
+  </div>
+</div>
+<div class="panels">
+  <div class="panel" id="p0"><div class="ptitle">// threat indicators</div>${indHTML}</div>
+  <div class="panel" id="p1"><div class="ptitle">// analysis log</div>${logHTML}</div>
+</div>
+<div class="final" id="fin">
+  <div class="ftitle">// final verdict</div>
+  <div class="fgrid">
+    <div class="fi"><span class="fk">STATUS</span><span class="fv ${rc}">${d.verdict}</span></div>
+    <div class="fi"><span class="fk">CONFIDENCE</span><span class="fv c">${d.confidence}%</span></div>
+    <div class="fi"><span class="fk">RISK SCORE</span><span class="fv ${rc}">${d.risk_score}/10</span></div>
+    <div class="fi"><span class="fk">RISK LEVEL</span><span class="fv ${rc}">${d.risk_level.toUpperCase()}</span></div>
+  </div>
+  <div class="rec ${vc}">${isP?'Do not visit. Avoid entering credentials or sensitive data.':isS?'Proceed with caution. Do not enter personal information.':'URL appears legitimate. Standard security practices apply.'}</div>
+</div>`;
+
+  document.getElementById('results').classList.add('on');
+  const els=[document.querySelector('.vbanner'),document.getElementById('mc0'),document.getElementById('mc1'),document.getElementById('mc2'),document.getElementById('gs'),document.getElementById('p0'),document.getElementById('p1'),document.getElementById('fin')];
+  els.forEach((el,i)=>{if(el)setTimeout(()=>{el.style.animation=`fadeSlide 0.45s ease forwards`;},i*90);});
+  document.getElementById('scanBtn').disabled=false;
+}
+</script>
+</body>
+</html>
